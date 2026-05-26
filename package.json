@@ -1,6 +1,6 @@
 {
   "name": "@jaronbarends/frontend-tooling-config",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Shared ESLint and Prettier config",
   "author": "Jaron Barends",
   "license": "ISC",
