@@ -1,13 +1,12 @@
 import js from '@eslint/js';
+import tsPlugin from '@typescript-eslint/eslint-plugin';
+import tsParser from '@typescript-eslint/parser';
 import configPrettier from 'eslint-config-prettier';
 import pluginUnusedImports from 'eslint-plugin-unused-imports';
-import tsParser from '@typescript-eslint/parser';
-import tsPlugin from '@typescript-eslint/eslint-plugin';
 import globals from 'globals';
 
 export default [
   js.configs.recommended,
-  configPrettier,
   {
     files: ['**/*.{js,jsx,ts,tsx}'],
     languageOptions: {
@@ -28,4 +27,5 @@ export default [
       'no-console': 'warn',
     },
   },
+  configPrettier, // must be last
 ];

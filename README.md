@@ -46,7 +46,7 @@ Each config file imports the config files it extends (react.mjs imports base.mjs
 
 ### .prettierrc
 
-Apart from things like trailing commas, tab width etc, .prettierrc also handles sorting of imports with `@trivago/prettier-plugin-sort-imports`.
+Apart from things like trailing commas, tab width etc, .prettierrc also handles sorting of imports with `@trivago/prettier-plugin-sort-imports`. `.prettierrc` is included as a template that needs to be copied to the project root. To make it extendable, we would need to use a `prettier.config.mjs` file in the external project which comes with more brittle code than a simple copy-paste
 
 ## Using this in a project
 
@@ -113,20 +113,12 @@ const config = [
 export default config;
 ```
 
-### 4. add .prettierrc
-
-Add this to your `.prettierrc` file
-```
-{
-  "extends": "@jaronbarends/frontend-tooling-config/.prettierrc"
-}
-```
-
-### 5. Copy Vscode settings into the project
+### 4. Copy .prettierrc and Vscode settings into the project
 
 Copy these from the `templates/` folder in this repo into your project root:
 
-- `templates/.vscode/settings.json` → `.vscode/settings.json`  
+- `templates/.prettierrc` → `/.prettierrc`
+- `templates/.vscode/settings.json` → `/.vscode/settings.json`  
   Configures ESLint auto-fix and Prettier format on save for everyone working in the project, regardless of their personal VS Code settings.
 
 ## Publishing a new version
@@ -135,10 +127,10 @@ Copy these from the `templates/` folder in this repo into your project root:
 
 Bump the version in `package.json` following [semver](https://semver.org/):
 
-| Change | Example | When |
-|---|---|---|
-| `patch` | `1.0.0` → `1.0.1` | Bugfix, no config behavior change |
-| `minor` | `1.0.0` → `1.1.0` | New config or export added, backwards compatible |
+| Change  | Example           | When                                                                |
+| ------- | ----------------- | ------------------------------------------------------------------- |
+| `patch` | `1.0.0` → `1.0.1` | Bugfix, no config behavior change                                   |
+| `minor` | `1.0.0` → `1.1.0` | New config or export added, backwards compatible                    |
 | `major` | `1.0.0` → `2.0.0` | Breaking change (rule added/removed that affects existing projects) |
 
 ```bash
