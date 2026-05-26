@@ -4,11 +4,33 @@ Shared ESLint configuration for JavaScript, React, and Next.js projects.
 
 ## Why this exists
 
-ESLint flat config (the default since ESLint 9) doesn't have a built-in way to extend from a config file outside a project. The options are relative path imports (fragile) or a proper package (portable). This repo is that package — it lets all projects reference a single source of truth for linting rules, versioned in git.
+I want to be able to re-use my frontend tooling setup across project. This consists of three parts:
 
-Prettier is intentionally kept separate. It handles formatting; ESLint handles code quality. They don't overlap because `eslint-config-prettier` disables any ESLint rules that would conflict with Prettier.
+- ESLint config for syntax checking
+- .prettierrc for code formatting
+- settings.json for VSCode for using ESLint and .prettierrc
 
-## How it works
+### ESLint config
+
+Instead of using `.eslintrc` we're now using ESLint flat config (the default since ESLint 9). Flat config does not extend referenced packages (`extends: ['eslint:recommended', 'plugin:react/recommended'], ...`) like `.eslintrc` does, but you directly import config files that you spread an can override:
+
+```js
+import someConfig from "eslint-config-something";
+export default [
+  ...someConfig, // was: extends: ['something']
+  {
+    rules: {
+      /* your overrides */
+    },
+  },
+];
+```
+
+This repo is contains those config files, and other files needed for vscode and prettier.
+
+Prettier is intentionally kept separate. It handles formatting; ESLint handles code quality. They don't overlap because [`eslint-config-prettier`](https://www.npmjs.com/package/eslint-config-prettier) disables any ESLint rules that would conflict with Prettier.
+
+#### How this ESLint config works
 
 The config is split into three layers that build on each other:
 
@@ -20,37 +42,36 @@ react.mjs     + React and React Hooks rules
 next.mjs      + Next.js, accessibility (jsx-a11y), and import rules
 ```
 
-Each project imports the layer that matches its stack.
+Each config file imports the config files it extends (react.mjs imports base.mjs, next.mjs imports react.mjs), so you only need to import one config file in your project.
+
+### .prettierrc
+
+Apart from things like trailing commas, tab width etc, .prettierrc also handles sorting of imports with `@trivago/prettier-plugin-sort-imports`.
 
 ## Using this in a project
 
+### 0. Prerequisites
+
+Make sure the Prettier VS Code extension (`esbenp.prettier-vscode`) is installed and enabled for the workspace. If it's disabled, `formatOnSave` and `codeActionsOnSave` both silently fail — ESLint won't auto-fix on save even if it's detecting errors correctly.
+
 ### 1. Install the package
 
-In your project root, add this to `devDependencies` in `package.json`:
-
-```json
-"@jaronbarends/frontend-tooling-config": "file:../../frontend-tooling-config"
-```
-
-Adjust the relative path to point to where this repo lives on disk. Then run:
-
 ```bash
-npm install
+npm install -D @jaronbarends/frontend-tooling-config
 ```
 
-> If you ever publish this package to npm, replace the `file:` path with a version number like `"^1.0.0"`. Nothing else changes.
+Peer dependencies are installed automatically (npm 7+). If your project already has conflicting versions of any peer dependency, npm will warn you — resolve those manually.
 
-### 2. Install ESLint in the project
+### 2. Verify that you use ESLint v9
 
-```bash
-npm install -D eslint
-```
+Rationale: see under [`ESLint version pinning`](#eslint version pinning)
 
 ### 3. Create `eslint.config.mjs` in the project root
 
 **For a Next.js project:**
+
 ```js
-import next from '@jaronbarends/frontend-tooling-config/next';
+import next from "@jaronbarends/frontend-tooling-config/next";
 
 const config = [
   ...next,
@@ -63,8 +84,9 @@ export default config;
 ```
 
 **For a React project:**
+
 ```js
-import react from '@jaronbarends/frontend-tooling-config/react';
+import react from "@jaronbarends/frontend-tooling-config/react";
 
 const config = [
   ...react,
@@ -77,8 +99,9 @@ export default config;
 ```
 
 **For a plain JS project:**
+
 ```js
-import base from '@jaronbarends/frontend-tooling-config/base';
+import base from "@jaronbarends/frontend-tooling-config/base";
 
 const config = [
   ...base,
@@ -90,17 +113,65 @@ const config = [
 export default config;
 ```
 
-### 4. Copy template files into the project
+### 4. add .prettierrc
+
+Add this to your `.prettierrc` file
+```
+{
+  "extends": "@jaronbarends/frontend-tooling-config/.prettierrc"
+}
+```
+
+### 5. Copy Vscode settings into the project
 
 Copy these from the `templates/` folder in this repo into your project root:
 
 - `templates/.vscode/settings.json` → `.vscode/settings.json`  
   Configures ESLint auto-fix and Prettier format on save for everyone working in the project, regardless of their personal VS Code settings.
 
-- `templates/.prettierrc` → `.prettierrc`  
-  Prettier formatting rules. Adjust to taste — Prettier config is intentionally per-project, not part of this package.
+## Publishing a new version
 
-> Make sure the Prettier VS Code extension (`esbenp.prettier-vscode`) is installed and enabled for the workspace. If it's disabled, `formatOnSave` and `codeActionsOnSave` both silently fail.
+### 1. Update the version
+
+Bump the version in `package.json` following [semver](https://semver.org/):
+
+| Change | Example | When |
+|---|---|---|
+| `patch` | `1.0.0` → `1.0.1` | Bugfix, no config behavior change |
+| `minor` | `1.0.0` → `1.1.0` | New config or export added, backwards compatible |
+| `major` | `1.0.0` → `2.0.0` | Breaking change (rule added/removed that affects existing projects) |
+
+```bash
+npm version patch   # or minor, or major
+```
+
+This updates `package.json` and creates a git tag automatically.
+
+### 2. Publish
+
+```bash
+npm publish --access public
+```
+
+### 3. Push including the tag
+
+```bash
+git push && git push --tags
+```
+
+### Updating consuming projects
+
+After publishing, update the package in any project that uses it:
+
+```bash
+npm update @jaronbarends/frontend-tooling-config
+```
+
+Note that if you bumped a **major** version, `npm update` won't cross the major boundary. You'll need:
+
+```bash
+npm install -D @jaronbarends/frontend-tooling-config@latest
+```
 
 ## Caveats and pitfalls
 
@@ -126,15 +197,17 @@ In ESLint flat config, `ignores` only applies globally when it is the sole key i
 
 `@typescript-eslint/parser` is used even in `base.mjs` because it's a superset of JavaScript and handles both. This means TS parser is a dependency even in plain JS projects. It causes no issues in practice, but it's a deliberate tradeoff for simplicity.
 
-### `file:` references and `npm install`
+## TODO
 
-When you update this package, projects that reference it via `file:` don't pick up changes automatically. You need to run `npm install` in each project after making changes here. This is standard npm behavior for `file:` dependencies. (`file:` references work differently from registry packages. With a registry package, npm caches by version number and won't re-fetch unless the version changes. With a file: reference, npm copies the files directly from the local path each time you run npm install, regardless of version. So the version number in package.json is irrelevant for `file:` dependencies.)
+### Add Type-aware lint rules
 
-### Prettier must be installed and enabled
+(checks not only syntax, but also things like return types, like this:
 
-The VS Code Prettier extension must be installed and enabled for the workspace. If it's disabled, `formatOnSave` and `codeActionsOnSave` both silently fail — ESLint won't auto-fix on save even if it's detecting errors correctly.
+```
+// @typescript-eslint/no-floating-promises
+async function fetchData() { return await getData(); }
 
-## What's not included
+fetchData(); // ← flagged: Promise not awaited or handled
+```
 
-- **Type-aware lint rules** — rules that use the TypeScript compiler to catch type-level bugs. These are slower and require `tsconfig.json` to be wired up. Can be added later.
-- **Import sorting** — handled by `@trivago/prettier-plugin-sort-imports` in `.prettierrc`, not ESLint.
+)
